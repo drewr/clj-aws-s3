@@ -442,6 +442,18 @@
     (s3-client cred)
     (map->ListObjectsRequest (merge {:bucket bucket} options)))))
 
+(defn key-seq
+  "Return a seq of keys matching a bucket and prefix."
+  [cred bucket prefix]
+  (let [step (fn step [marker]
+               (let [r (list-objects cred bucket
+                                     {:prefix prefix :marker marker})]
+                 (lazy-seq
+                  (cons (->> r :objects (map :key))
+                        (when (:truncated? r)
+                          (step (:next-marker r)))))))]
+    (concat (step nil))))
+
 (defn delete-object
   "Delete an object from an S3 bucket."
   [cred bucket key]
